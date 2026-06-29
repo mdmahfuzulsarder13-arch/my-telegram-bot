@@ -1,11 +1,10 @@
 import logging
 import sqlite3
-import os
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils import executor
 
-API_TOKEN = os.getenv("8990527408:AAHW8bzyfmT0lDid7q_lq89MNnGtmMJsDC0")
+API_TOKEN = "8990527408:AAHW8bzyfmT0lDid7q_lq89MNnGtmMJsDC0"
 ADMIN_ID = 5582627293
 
 logging.basicConfig(level=logging.INFO)
@@ -36,16 +35,6 @@ CREATE TABLE IF NOT EXISTS accounts (
 )
 """)
 
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS withdraws (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER,
-    amount REAL,
-    address TEXT,
-    status TEXT DEFAULT 'Pending'
-)
-""")
-
 conn.commit()
 
 user_state = {}
@@ -60,6 +49,32 @@ def main_menu():
 # ================= START =================
 @dp.message_handler(commands=['start'])
 async def start(message: types.Message):
+    cursor.execute("INSERT OR IGNORE INTO users (user_id) VALUES (?)", (message.from_user.id,))
+    conn.commit()
+    await message.answer("Welcome!", reply_markup=main_menu())
+
+# ================= REGISTER =================
+@dp.message_handler(lambda m: m.text == "Register")
+async def register(message: types.Message):
+    kb = ReplyKeyboardMarkup(resize_keyboard=True)
+    kb.add("Submit Account", "Back")
+    await message.answer("Submit your account", reply_markup=kb)
+
+# ================= SUBMIT =================
+@dp.message_handler(lambda m: m.text == "Submit Account")
+async def submit(message: types.Message):
+    user_state[message.from_user.id] = {"step": "acc"}
+    await message.answer("Enter Gmail:")
+
+# ================= BALANCE =================
+@dp.message_handler(lambda m: m.text == "Balance")
+async def balance(message: types.Message):
+    cursor.execute("SELECT balance FROM users WHERE user_id=?", (message.from_user.id,))
+    bal = cursor.fetchone()[0]
+    await message.answer(f"Balance: {bal}$")
+
+# ================= HANDLER =================
+@dp.message_handlerasync def start(message: types.Message):
     cursor.execute("INSERT OR IGNORE INTO users (user_id) VALUES (?)", (message.from_user.id,))
     conn.commit()
     await message.answer("Welcome!", reply_markup=main_menu())
